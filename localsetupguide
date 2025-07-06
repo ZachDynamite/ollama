@@ -1,0 +1,278 @@
+DeepSeek Coder V2 Setup Guide for Kali Linux
+System Requirements
+
+Hardware Requirements:
+
+    RAM: 16GB minimum (32GB recommended for V2 models)
+    Storage: 50GB+ free space for models
+    GPU: Optional but recommended (NVIDIA with CUDA support)
+    CPU: Modern multi-core processor
+
+Check your system:
+
+bash
+
+# Check RAM
+free -h
+
+# Check available disk space
+df -h
+
+# Check GPU (if available)
+nvidia-smi
+
+Step 1: Install Ollama
+Method 1: Official Install Script (Recommended)
+
+bash
+
+# Download and install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Verify installation
+ollama --version
+
+Method 2: Manual Installation
+
+bash
+
+# Download the binary
+wget https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64
+
+# Make it executable
+chmod +x ollama-linux-amd64
+
+# Move to system path
+sudo mv ollama-linux-amd64 /usr/local/bin/ollama
+
+Step 2: Start Ollama Service
+
+bash
+
+# Start Ollama service
+sudo systemctl start ollama
+
+# Enable auto-start on boot
+sudo systemctl enable ollama
+
+# Check service status
+sudo systemctl status ollama
+
+Alternative: Run Ollama manually
+
+bash
+
+# Run in background
+ollama serve &
+
+# Or run in foreground for debugging
+ollama serve
+
+Step 3: Download DeepSeek Coder V2
+Option A: DeepSeek Coder V2 Lite (Recommended for most systems)
+
+bash
+
+# Download the model (this will take a while - ~20GB)
+ollama pull deepseek-coder-v2:16b
+
+# Or the smaller version if RAM is limited
+ollama pull deepseek-coder-v2:1.3b
+
+Option B: Full DeepSeek Coder V2 (If you have 32GB+ RAM)
+
+bash
+
+# Full model - very large but best performance
+ollama pull deepseek-coder-v2:latest
+
+Step 4: Test Your Installation
+Basic Test
+
+bash
+
+# Test the model
+ollama run deepseek-coder-v2:16b
+
+# Try a simple coding prompt
+# Type: "Write a Python script to decode base64"
+# Press Ctrl+D to exit
+
+CTF Forensics Test
+
+bash
+
+# Test with a forensics-specific prompt
+ollama run deepseek-coder-v2:16b "Write a Python script to analyze network pcap files and extract HTTP requests"
+
+Step 5: Setup for CTF Development
+Create a CTF Workspace
+
+bash
+
+# Create your CTF tools directory
+mkdir -p ~/ctf-tools
+cd ~/ctf-tools
+
+# Create a helper script for quick AI assistance
+cat > ai-helper.sh << 'EOF'
+#!/bin/bash
+echo "CTF AI Helper - DeepSeek Coder V2"
+echo "Enter your forensics tool request:"
+read -p "> " prompt
+ollama run deepseek-coder-v2:16b "$prompt"
+EOF
+
+chmod +x ai-helper.sh
+
+Integration with Your Terminal
+Option 1: Create an alias
+
+bash
+
+# Add to your ~/.bashrc or ~/.zshrc
+echo 'alias ctf-ai="ollama run deepseek-coder-v2:16b"' >> ~/.bashrc
+source ~/.bashrc
+
+# Usage: ctf-ai "create a steganography detection tool"
+
+Option 2: Advanced wrapper script
+
+bash
+
+# Create advanced CTF AI wrapper
+cat > ~/bin/ctf-ai << 'EOF'
+#!/bin/bash
+
+MODEL="deepseek-coder-v2:16b"
+CONTEXT="You are an expert in CTF digital forensics. Generate complete, working tools for:"
+
+if [ $# -eq 0 ]; then
+    echo "Usage: ctf-ai 'your forensics tool request'"
+    echo "Example: ctf-ai 'create a log analyzer for apache logs'"
+    exit 1
+fi
+
+echo "Generating CTF forensics tool..."
+ollama run $MODEL "$CONTEXT $1"
+EOF
+
+chmod +x ~/bin/ctf-ai
+
+Step 6: Performance Optimization
+For GPU Acceleration (if available)
+
+bash
+
+# Install CUDA toolkit
+sudo apt update
+sudo apt install nvidia-cuda-toolkit
+
+# Verify CUDA installation
+nvcc --version
+
+# Ollama should automatically detect and use GPU
+
+Memory Management
+
+bash
+
+# Monitor memory usage
+watch -n 1 'free -h && echo "--- GPU ---" && nvidia-smi | grep -E "(Memory|%)"'
+
+# If running out of memory, use smaller model
+ollama pull deepseek-coder-v2:1.3b
+
+Step 7: CTF-Specific Usage Examples
+Example Prompts for Forensics Tools
+
+bash
+
+# Network analysis
+ctf-ai "Create a Python script to parse pcap files and extract suspicious network traffic patterns"
+
+# File analysis
+ctf-ai "Write a tool to analyze file headers and detect hidden data in images"
+
+# Log analysis
+ctf-ai "Generate a script to parse Windows Event logs and identify security events"
+
+# Cryptography
+ctf-ai "Create a tool to detect and analyze encrypted files in a directory"
+
+# Memory forensics
+ctf-ai "Write a script to analyze memory dumps and extract process information"
+
+Troubleshooting
+Common Issues
+
+1. Model download fails:
+
+bash
+
+# Check internet connection and retry
+ollama pull deepseek-coder-v2:16b --verbose
+
+2. Out of memory errors:
+
+bash
+
+# Use smaller model
+ollama pull deepseek-coder-v2:1.3b
+
+# Or increase swap space
+sudo fallocate -l 8G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+3. Service won't start:
+
+bash
+
+# Check logs
+journalctl -u ollama -f
+
+# Manual start for debugging
+ollama serve --debug
+
+4. Poor performance:
+
+bash
+
+# Check system resources
+htop
+
+# Use CPU-only mode if GPU issues
+CUDA_VISIBLE_DEVICES="" ollama run deepseek-coder-v2:16b
+
+Security Considerations
+
+For CTF environments:
+
+    Models run locally - your prompts and code stay on your system
+    No internet required after initial download
+    Can be used in isolated/air-gapped environments
+    Generated code should still be reviewed before execution
+
+Next Steps
+
+    Test with your typical CTF scenarios
+    Create custom prompt templates for common forensics tasks
+    Integrate with your existing CTF workflow
+    Consider setting up multiple models for different specializations
+
+Model Management
+
+bash
+
+# List installed models
+ollama list
+
+# Remove models you don't need
+ollama rm deepseek-coder-v2:1.3b
+
+# Update models
+ollama pull deepseek-coder-v2:16b
+
+You now have a powerful, local AI assistant for CTF digital forensics that won't hit usage limits or cost you money per use!
