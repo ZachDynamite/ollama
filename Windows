@@ -1,0 +1,285 @@
+# DeepSeek Coder V2 Setup Guide for Windows 10
+
+## System Requirements
+
+### Hardware Requirements:
+- **RAM:** 16GB minimum (32GB recommended for V2 models)
+- **Storage:** 50GB+ free space for models
+- **GPU:** Optional but recommended (NVIDIA with CUDA support)
+- **CPU:** Modern multi-core processor
+
+### Check your system:
+```powershell
+# Check RAM and system info
+Get-ComputerInfo | Select-Object TotalPhysicalMemory, CsProcessors
+
+# Check available disk space
+Get-PSDrive -PSProvider FileSystem
+
+# Check GPU (if available)
+nvidia-smi
+```
+
+## Step 1: Install Ollama
+
+### Method 1: Official Windows Installer (Recommended)
+
+1. Download the Ollama installer from [https://ollama.com/download](https://ollama.com/download)
+2. Run the `OllamaSetup.exe` installer
+3. Follow the installation wizard
+4. Ollama will automatically start as a Windows service
+
+### Method 2: Manual Installation via PowerShell
+
+```powershell
+# Download Ollama for Windows
+Invoke-WebRequest -Uri "https://ollama.com/download/windows" -OutFile "OllamaSetup.exe"
+
+# Run the installer
+Start-Process "OllamaSetup.exe" -Wait
+
+# Verify installation
+ollama --version
+```
+
+## Step 2: Verify Ollama Service
+
+```powershell
+# Check if Ollama service is running
+Get-Service -Name "Ollama" -ErrorAction SilentlyContinue
+
+# Start Ollama service if not running
+Start-Service -Name "Ollama"
+
+# Alternative: Run Ollama manually
+ollama serve
+```
+
+## Step 3: Download DeepSeek Coder V2
+
+### Option A: DeepSeek Coder V2 Lite (Recommended for most systems)
+
+```powershell
+# Open Command Prompt or PowerShell as Administrator
+# Download the model (this will take a while - ~20GB)
+ollama pull deepseek-coder-v2:16b
+
+# Or the smaller version if RAM is limited
+ollama pull deepseek-coder-v2:1.3b
+```
+
+### Option B: Full DeepSeek Coder V2 (If you have 32GB+ RAM)
+
+```powershell
+# Full model - very large but best performance
+ollama pull deepseek-coder-v2:latest
+```
+
+## Step 4: Test Your Installation
+
+### Basic Test
+
+```powershell
+# Test the model
+ollama run deepseek-coder-v2:16b
+
+# Try a simple coding prompt
+# Type: "Write a Python script to decode base64"
+# Press Ctrl+C to exit
+```
+
+### CTF Forensics Test
+
+```powershell
+# Test with a forensics-specific prompt
+ollama run deepseek-coder-v2:16b "Write a Python script to analyze network pcap files and extract HTTP requests"
+```
+
+## Step 5: Setup for CTF Development
+
+### Create a CTF Workspace
+
+```powershell
+# Create your CTF tools directory
+New-Item -ItemType Directory -Path "C:\ctf-tools" -Force
+Set-Location "C:\ctf-tools"
+
+# Create a helper batch script for quick AI assistance
+@"
+@echo off
+echo CTF AI Helper - DeepSeek Coder V2
+echo Enter your forensics tool request:
+set /p prompt="> "
+ollama run deepseek-coder-v2:16b "%prompt%"
+pause
+"@ | Out-File -FilePath "ai-helper.bat" -Encoding ASCII
+```
+
+### Integration with Your Command Line
+
+#### Option 1: Create a batch file alias
+
+```powershell
+# Create a batch file in your PATH
+$batchContent = @"
+@echo off
+ollama run deepseek-coder-v2:16b %*
+"@
+
+$batchContent | Out-File -FilePath "C:\Windows\System32\ctf-ai.bat" -Encoding ASCII
+
+# Usage: ctf-ai "create a steganography detection tool"
+```
+
+#### Option 2: PowerShell Function
+
+```powershell
+# Add to your PowerShell profile
+$profilePath = $PROFILE
+if (!(Test-Path $profilePath)) {
+    New-Item -ItemType File -Path $profilePath -Force
+}
+
+Add-Content -Path $profilePath -Value @"
+function ctf-ai {
+    param([string]`$prompt)
+    if (-not `$prompt) {
+        Write-Host "Usage: ctf-ai 'your forensics tool request'"
+        Write-Host "Example: ctf-ai 'create a log analyzer for apache logs'"
+        return
+    }
+    `$context = "You are an expert in CTF digital forensics. Generate complete, working tools for:"
+    ollama run deepseek-coder-v2:16b "`$context `$prompt"
+}
+"@
+
+# Reload profile
+. $PROFILE
+```
+
+## Step 6: Performance Optimization
+
+### For GPU Acceleration (if available)
+
+```powershell
+# Download and install CUDA Toolkit from NVIDIA
+# https://developer.nvidia.com/cuda-downloads
+
+# Verify CUDA installation
+nvcc --version
+
+# Ollama should automatically detect and use GPU
+```
+
+### Memory Management
+
+```powershell
+# Monitor memory usage
+while ($true) {
+    Clear-Host
+    Get-Counter "\Memory\Available MBytes" | Select-Object -ExpandProperty CounterSamples | Format-Table
+    if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
+        nvidia-smi
+    }
+    Start-Sleep 2
+}
+
+# If running out of memory, use smaller model
+ollama pull deepseek-coder-v2:1.3b
+```
+
+## Step 7: CTF-Specific Usage Examples
+
+### Example Prompts for Forensics Tools
+
+```powershell
+# Network analysis
+ctf-ai "Create a Python script to parse pcap files and extract suspicious network traffic patterns"
+
+# File analysis
+ctf-ai "Write a tool to analyze file headers and detect hidden data in images"
+
+# Log analysis
+ctf-ai "Generate a script to parse Windows Event logs and identify security events"
+
+# Cryptography
+ctf-ai "Create a tool to detect and analyze encrypted files in a directory"
+
+# Memory forensics
+ctf-ai "Write a script to analyze memory dumps and extract process information"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Model download fails:**
+   ```powershell
+   # Check internet connection and retry
+   ollama pull deepseek-coder-v2:16b --verbose
+   ```
+
+2. **Out of memory errors:**
+   ```powershell
+   # Use smaller model
+   ollama pull deepseek-coder-v2:1.3b
+   
+   # Or increase virtual memory
+   # Go to System Properties > Advanced > Performance Settings > Advanced > Virtual Memory
+   ```
+
+3. **Service won't start:**
+   ```powershell
+   # Check Windows Event Viewer for Ollama service errors
+   Get-EventLog -LogName Application -Source "Ollama" -Newest 10
+   
+   # Manual start for debugging
+   ollama serve --debug
+   ```
+
+4. **Poor performance:**
+   ```powershell
+   # Check system resources
+   Get-Process | Sort-Object CPU -Descending | Select-Object -First 10
+   
+   # Use CPU-only mode if GPU issues
+   $env:CUDA_VISIBLE_DEVICES=""
+   ollama run deepseek-coder-v2:16b
+   ```
+
+## Security Considerations
+
+For CTF environments:
+- Models run locally - your prompts and code stay on your system
+- No internet required after initial download
+- Can be used in isolated/air-gapped environments
+- Generated code should still be reviewed before execution
+
+## Next Steps
+
+1. Test with your typical CTF scenarios
+2. Create custom prompt templates for common forensics tasks
+3. Integrate with your existing CTF workflow
+4. Consider setting up multiple models for different specializations
+
+## Model Management
+
+```powershell
+# List installed models
+ollama list
+
+# Remove models you don't need
+ollama rm deepseek-coder-v2:1.3b
+
+# Update models
+ollama pull deepseek-coder-v2:16b
+```
+
+## Windows-Specific Tips
+
+- **Windows Defender:** You may need to add exclusions for the Ollama installation directory
+- **Firewall:** Ollama runs on localhost by default, but ensure Windows Firewall isn't blocking it
+- **Task Manager:** Monitor GPU usage in Task Manager > Performance tab
+- **Scheduled Tasks:** Set up automatic model updates using Windows Task Scheduler
+
+You now have a powerful, local AI assistant for CTF digital forensics on Windows 10 that won't hit usage limits or cost you money per use!
