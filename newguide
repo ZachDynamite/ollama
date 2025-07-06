@@ -1,0 +1,266 @@
+# CTF AI Assistant Setup Guide - Corrected
+
+## Prerequisites Check
+
+Before creating the batch file, ensure these steps are completed:
+
+### Step 1: Install Ollama
+```powershell
+# Download Ollama from https://ollama.ai/download
+# Or use winget (if available)
+winget install ollama
+
+# Verify installation
+ollama --version
+```
+
+### Step 2: Start Ollama Service
+```powershell
+# Ollama should start automatically, but if not:
+ollama serve
+
+# Or check if it's running
+Get-Process -Name "ollama" -ErrorAction SilentlyContinue
+```
+
+### Step 3: Download the Model
+```powershell
+# This is crucial - the model must be downloaded first
+ollama pull deepseek-coder-v2:latest
+
+# If you have limited RAM, use the smaller version:
+ollama pull deepseek-coder-v2:1.3b
+
+# Verify model is downloaded
+ollama list
+```
+
+## Creating the Batch File (Corrected Method)
+
+### Method 1: Using PowerShell (Corrected)
+```powershell
+# Create the CTF tools directory
+New-Item -ItemType Directory -Path "C:\ctf-tools" -Force
+Set-Location "C:\ctf-tools"
+
+# Create the batch file content properly
+$batchContent = @'
+@echo off
+echo === CTF AI Helper - DeepSeek Coder V2 ===
+echo.
+echo Enter your forensics tool request:
+set /p prompt="> "
+echo.
+echo Sending prompt to Ollama...
+ollama run deepseek-coder-v2:16b "%prompt%"
+echo.
+pause
+'@
+
+# Write to file with proper encoding
+$batchContent | Out-File -FilePath "ai-helper.bat" -Encoding ASCII
+
+# Make it executable (though not usually needed on Windows)
+icacls "ai-helper.bat" /grant Everyone:F
+```
+
+### Method 2: Manual Creation (Recommended)
+```powershell
+# Navigate to your CTF tools directory
+Set-Location "C:\ctf-tools"
+
+# Use notepad to create the file
+notepad ai-helper.bat
+```
+
+Then paste this exact content into notepad:
+```batch
+@echo off
+echo === CTF AI Helper - DeepSeek Coder V2 ===
+echo.
+echo Enter your forensics tool request:
+set /p prompt="> "
+echo.
+echo Sending prompt to Ollama...
+ollama run deepseek-coder-v2:latest "%prompt%"
+echo.
+pause
+```
+
+## Testing the Setup
+
+### Step 1: Test Ollama Directly
+```powershell
+# Test if Ollama is working
+ollama run deepseek-coder-v2:latest "Write a simple Python hello world script"
+```
+
+### Step 2: Test the Batch File
+```powershell
+# Navigate to your CTF tools directory
+cd C:\ctf-tools
+
+# Run the batch file
+.\ai-helper.bat
+```
+
+## Troubleshooting Common Issues
+
+### Issue 1: "ollama: command not found"
+```powershell
+# Check if Ollama is in PATH
+$env:PATH -split ';' | Where-Object { $_ -like "*ollama*" }
+
+# If not found, add to PATH or use full path
+# Find Ollama installation
+Get-ChildItem -Path "C:\Users\$env:USERNAME\AppData\Local\Programs" -Name "ollama*" -Recurse -ErrorAction SilentlyContinue
+```
+
+### Issue 2: Model Not Found
+```powershell
+# List available models
+ollama list
+
+# If empty, download the model
+ollama pull deepseek-coder-v2:16b
+```
+
+### Issue 3: Service Not Running
+```powershell
+# Check if Ollama service is running
+Get-Process -Name "ollama*" -ErrorAction SilentlyContinue
+
+# Start service manually
+Start-Process -FilePath "ollama" -ArgumentList "serve" -WindowStyle Hidden
+
+# Or in a new terminal
+ollama serve
+```
+
+### Issue 4: Memory Issues
+```powershell
+# Check available memory
+Get-Counter "\Memory\Available MBytes"
+
+# If low memory, use smaller model
+ollama pull deepseek-coder-v2:1.3b
+
+# Update batch file to use smaller model
+(Get-Content "ai-helper.bat") -replace "deepseek-coder-v2:16b", "deepseek-coder-v2:1.3b" | Set-Content "ai-helper.bat"
+```
+
+## Enhanced Batch File with Error Handling
+
+```batch
+@echo off
+title CTF AI Helper
+color 0A
+
+echo === CTF AI Helper - DeepSeek Coder V2 ===
+echo.
+
+REM Check if Ollama is available
+where ollama >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Error: Ollama not found in PATH
+    echo Please install Ollama from https://ollama.ai/download
+    pause
+    exit /b 1
+)
+
+REM Check if model is available
+ollama list | findstr "deepseek-coder-v2" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Error: DeepSeek Coder V2 model not found
+    echo Please run: ollama pull deepseek-coder-v2:latest
+    pause
+    exit /b 1
+)
+
+:main
+echo Enter your forensics tool request (or 'quit' to exit):
+set /p prompt="> "
+
+if /i "%prompt%"=="quit" (
+    echo Goodbye!
+    exit /b 0
+)
+
+if "%prompt%"=="" (
+    echo Please enter a valid prompt
+    goto main
+)
+
+echo.
+echo Sending prompt to Ollama...
+echo ----------------------------------------
+ollama run deepseek-coder-v2:latest "%prompt%"
+echo ----------------------------------------
+echo.
+echo Press any key to continue or close window to exit...
+pause >nul
+goto main
+```
+
+## Alternative: PowerShell Version
+
+If batch files continue to cause issues, create a PowerShell version:
+
+```powershell
+# Create ai-helper.ps1
+$psContent = @'
+param([string]$prompt)
+
+Write-Host "=== CTF AI Helper - DeepSeek Coder V2 ===" -ForegroundColor Green
+Write-Host
+
+if (-not $prompt) {
+    $prompt = Read-Host "Enter your forensics tool request"
+}
+
+if ($prompt -eq "quit" -or $prompt -eq "") {
+    Write-Host "Goodbye!" -ForegroundColor Yellow
+    return
+}
+
+Write-Host "Sending prompt to Ollama..." -ForegroundColor Cyan
+Write-Host "----------------------------------------" -ForegroundColor Gray
+
+try {
+    & ollama run deepseek-coder-v2:latest $prompt
+} catch {
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Make sure Ollama is installed and the model is downloaded" -ForegroundColor Yellow
+}
+
+Write-Host "----------------------------------------" -ForegroundColor Gray
+Write-Host "Press any key to continue..."
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+'@
+
+$psContent | Out-File -FilePath "C:\ctf-tools\ai-helper.ps1" -Encoding UTF8
+
+# Create a batch file to run the PowerShell script
+@"
+@echo off
+powershell -ExecutionPolicy Bypass -File "C:\ctf-tools\ai-helper.ps1"
+pause
+"@ | Out-File -FilePath "C:\ctf-tools\ai-helper.bat" -Encoding ASCII
+```
+
+## Quick Start Checklist
+
+- [ ] Ollama installed and in PATH
+- [ ] Ollama service running (`ollama serve`)
+- [ ] Model downloaded (`ollama pull deepseek-coder-v2:latest`)
+- [ ] Batch file created in `C:\ctf-tools\`
+- [ ] Batch file executable and tested
+- [ ] Sufficient memory available (8GB+ recommended for latest model)
+
+## Usage Examples
+
+Once working, try these prompts:
+- "Create a Python script to analyze network packet captures"
+- "Write a tool to extract metadata from image files"
+- "Generate a log parser for Windows Event logs"
+- "Create a script to detect steganography in images"
